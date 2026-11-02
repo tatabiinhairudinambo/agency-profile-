@@ -31,7 +31,7 @@ if (typeof window !== "undefined") gsap.registerPlugin(ScrollTrigger)
 
 const useIso = typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect
 
-export type OvsLink = { label: string; href?: string }
+export type OvsLink = { label: string; href?: string; /** Turns the item into a catalog dropdown with these links. */ items?: OvsLink[] }
 
 export type OvsMark = "watch" | "slash" | "scribe" | "knot" | "venn" | "leaf"
 
@@ -81,6 +81,44 @@ export type OvsPlan = {
 
 export type OvsFaq = { q: string; a: string }
 
+export type OvsArticle = {
+  category: string
+  title: string
+  excerpt: string
+  date: string
+  /** Reading time, e.g. "6 menit". */
+  read?: string
+  image?: string
+  imageAlt?: string
+  href?: string
+}
+
+export type OvsArticles = {
+  kicker?: string
+  title?: string
+  text?: string
+  items?: OvsArticle[]
+}
+
+export type OvsFeature = { title: string; text: string }
+
+export type OvsProductCard = {
+  name: string
+  category: string
+  price: string
+  note?: string
+  image?: string
+  imageAlt?: string
+  href?: string
+}
+
+export type OvsGalleryItem = { image: string; caption?: string; alt?: string }
+
+export type OvsGuide = { title: string; text: string; meta?: string }
+
+/** Copy for a simple section: kicker, heading, lede and its items. */
+export type OvsSectionCopy<T> = { kicker?: string; title?: string; text?: string; items?: T[] }
+
 export type OvsSeason = "summer" | "autumn" | "blossom"
 
 export interface OverstoryStudioLandingProps {
@@ -119,6 +157,16 @@ export interface OverstoryStudioLandingProps {
   } | null
   work?: { kicker?: string; title?: string; items?: OvsCase[]; next?: string; nextCta?: string } | null
   process?: { kicker?: string; title?: string; steps?: OvsStep[] } | null
+  /** Article cards, shown between work and process. `null` hides the section. */
+  articles?: OvsArticles | null
+  /** Key-feature cards, shown after the app band. `null` hides the section. */
+  features?: OvsSectionCopy<OvsFeature> | null
+  /** Product cards, shown after the features. `null` hides the section. */
+  products?: OvsSectionCopy<OvsProductCard> | null
+  /** Photo gallery, shown after the work section. `null` hides the section. */
+  gallery?: OvsSectionCopy<OvsGalleryItem> | null
+  /** Step-by-step guides, shown after the articles. `null` hides the section. */
+  guide?: OvsSectionCopy<OvsGuide> | null
   quotes?: OvsQuote[] | null
   pricing?: { kicker?: string; title?: string; text?: string; plans?: OvsPlan[]; quarterlyNote?: string } | null
   faq?: { kicker?: string; title?: string; text?: string; items?: OvsFaq[]; contactLabel?: string } | null
@@ -200,6 +248,47 @@ const DEFAULT_CASES = [
   { client: "Salesive", mark: "slash", kind: "AI sales coaching", title: "A coach in every call, without the awkward silence.", metric: "+212%", metricLabel: "activation after the new onboarding", year: "2025", mock: "chat", tint: ["#e9e2cf", "#c9a865"] },
   { client: "watchup", mark: "watch", kind: "Field-team monitoring", title: "One calm dashboard for two thousand remote crews.", metric: "3.1x", metricLabel: "trial to paid conversion", year: "2024", mock: "dashboard", tint: ["#d4e0ee", "#7d9cc4"] },
   { client: "Venn", mark: "venn", kind: "Shared finance", title: "Money for two, designed so nobody keeps score.", metric: "48k", metricLabel: "waitlist sign-ups in launch week", year: "2024", mock: "mobile", tint: ["#e6d9e4", "#b48aa8"] },
+]
+
+const DEFAULT_FEATURES = [
+  { title: "Pemantauan lahan", text: "Suhu, kelembapan tanah, dan prakiraan cuaca setiap petak terbaca dalam satu layar." },
+  { title: "Kalender tanam", text: "Jadwal semai, pemupukan, dan panen tersusun mengikuti musim dan umur tanaman." },
+  { title: "Deteksi hama", text: "Kenali gejala awal serangan dari foto daun, lengkap dengan langkah penanganannya." },
+  { title: "Rekomendasi pupuk", text: "Jenis dan dosis pupuk menyesuaikan fase tumbuh serta hasil uji tanah petakmu." },
+  { title: "Catatan panen", text: "Rekap hasil per petak, termasuk biaya produksi dan margin yang benar-benar didapat." },
+  { title: "Harga pasar", text: "Pantau harga komoditas harian sebelum memutuskan kapan dan ke mana menjual." },
+]
+
+const DEFAULT_PRODUCTS = [
+  { name: "Pupuk Organik Granul", category: "Pupuk", note: "10 kg · kompos matang", price: "Rp 45.000", image: "/images/farming/soil-health.jpg", imageAlt: "Tanaman sayur tumbuh di tanah subur" },
+  { name: "Benih Padi IR64", category: "Benih", note: "5 kg · bersertifikat", price: "Rp 32.000", image: "/images/farming/crop-management.jpg", imageAlt: "Lahan padi menghijau" },
+  { name: "Biopestisida Nabati", category: "Obat & hama", note: "1 L · ekstrak daun", price: "Rp 58.000", image: "/images/farming/crop-protection.jpg", imageAlt: "Petani menyiapkan produk perlindungan tanaman" },
+  { name: "Bibit Cabai Rawit", category: "Tanaman", note: "50 bibit · siap tanam", price: "Rp 18.000", image: "/images/farming/farmer-support.jpg", imageAlt: "Bibit tanaman muda siap ditanam" },
+]
+
+const DEFAULT_GALLERY = [
+  { image: "/images/farming/crop-management.jpg", caption: "Hamparan padi di Sleman", alt: "Lahan padi menghijau" },
+  { image: "/images/farming/harvest-planning.jpg", caption: "Persiapan masa panen", alt: "Lahan pertanian terbuka" },
+  { image: "/images/farming/soil-health.jpg", caption: "Tanah sehat, sayur subur", alt: "Sayuran segar di kebun" },
+  { image: "/images/farming/smart-irrigation.jpg", caption: "Irigasi mengikuti cuaca", alt: "Baris tanaman di lahan" },
+  { image: "/images/farming/crop-protection.jpg", caption: "Pemeriksaan hama", alt: "Petani memeriksa perlindungan tanaman" },
+  { image: "/images/farming/farmer-support.jpg", caption: "Semai bibit bersama", alt: "Bibit tanaman muda" },
+]
+
+const DEFAULT_GUIDE = [
+  { title: "Siapkan lahan", text: "Ukur pH dan kelembapan tanah, lalu tentukan petak tanam dan sumber airnya.", meta: "Langkah 1" },
+  { title: "Pilih benih", text: "Cocokkan varietas dengan ketinggian, musim, dan permintaan pasar setempat.", meta: "Langkah 2" },
+  { title: "Rawat & pantau", text: "Catat pemupukan dan penyiraman, lalu periksa daun setiap minggu untuk tanda hama.", meta: "Langkah 3" },
+  { title: "Panen & pasarkan", text: "Tentukan waktu panen dari umur tanaman dan harga pasar, siapkan pengemasan sederhana.", meta: "Langkah 4" },
+]
+
+const DEFAULT_ARTICLES = [
+  { category: "Pupuk", title: "Memilih pupuk organik untuk lahan padi", excerpt: "Kompos, pupuk kandang, atau granul? Panduan singkat menyesuaikan kebutuhan hara dengan kondisi tanahmu.", date: "12 Okt 2026", read: "6 menit", image: "/images/farming/soil-health.jpg", imageAlt: "Sayuran tumbuh di tanah kebun yang subur" },
+  { category: "Pupuk", title: "Dosis dan jadwal pemupukan yang aman", excerpt: "Lebih banyak pupuk belum tentu lebih baik. Ini cara membaca fase tumbuh tanaman sebelum menakar.", date: "08 Okt 2026", read: "5 menit", image: "/images/farming/crop-management.jpg", imageAlt: "Hamparan lahan pertanian hijau" },
+  { category: "Obat & hama", title: "Mengenali wereng sebelum menyerang", excerpt: "Tanda awal serangan sering terlewat. Kenali gejalanya di daun dan batang sejak minggu pertama.", date: "02 Okt 2026", read: "7 menit", image: "/images/farming/crop-protection.jpg", imageAlt: "Petani memeriksa produk perlindungan tanaman" },
+  { category: "Obat & hama", title: "Memakai pestisida dengan tepat dan aman", excerpt: "Dosis, waktu aplikasi, dan alat pelindung: hal kecil yang menentukan hasil dan keselamatan.", date: "26 Sep 2026", read: "8 menit", image: "/images/farming/smart-irrigation.jpg", imageAlt: "Baris tanaman di lahan pertanian" },
+  { category: "Tanaman", title: "Tanaman pendamping yang menjaga kebun", excerpt: "Beberapa tanaman membantu mengusir hama dan menutrisi tanah tanpa tambahan bahan kimia.", date: "19 Sep 2026", read: "4 menit", image: "/images/farming/farmer-support.jpg", imageAlt: "Bibit tanaman muda siap ditanam" },
+  { category: "Tanaman", title: "Menanam cabai rawit di lahan sempit", excerpt: "Pot, media tanam, dan perawatan sederhana untuk pekarangan rumah yang terbatas.", date: "11 Sep 2026", read: "5 menit", image: "/images/farming/harvest-planning.jpg", imageAlt: "Lahan pertanian terbuka di pedesaan" },
 ]
 
 const DEFAULT_STEPS = [
@@ -1394,6 +1483,11 @@ export default function OverstoryStudioLanding({
   process,
   quotes = DEFAULT_QUOTES as OvsQuote[],
   pricing,
+  articles,
+  features,
+  products,
+  gallery,
+  guide,
   pricingContent,
   faq,
   cta = DEFAULT_CTA,
@@ -1447,6 +1541,36 @@ export default function OverstoryStudioLanding({
     plans: pricing?.plans || (DEFAULT_PLANS as OvsPlan[]),
     quarterlyNote: pricing?.quarterlyNote || "Save 10%",
   }
+  const fr = features === null ? null : {
+    kicker: features?.kicker || "Fitur unggulan",
+    title: features?.title || "Fitur unggulan untuk kerja harian di lahan.",
+    text: features?.text || "Bukan sekadar dashboard. Setiap fitur menjawab satu pekerjaan yang benar-benar kamu lakukan di sawah atau kebun.",
+    items: features?.items || (DEFAULT_FEATURES as OvsFeature[]),
+  }
+  const pd = products === null ? null : {
+    kicker: products?.kicker || "Produk kami",
+    title: products?.title || "Produk kami, dipilih untuk lahan kecil.",
+    text: products?.text || "Pupuk, benih, dan obat tanaman yang sudah dicek kualitasnya, siap dikirim ke alamatmu.",
+    items: products?.items || (DEFAULT_PRODUCTS as OvsProductCard[]),
+  }
+  const ga = gallery === null ? null : {
+    kicker: gallery?.kicker || "Galeri",
+    title: gallery?.title || "Galeri dari lahan dan kebun.",
+    text: gallery?.text || "Momen sehari-hari petani yang memakai Tani Pintar, dari semai sampai panen.",
+    items: gallery?.items || (DEFAULT_GALLERY as OvsGalleryItem[]),
+  }
+  const gu = guide === null ? null : {
+    kicker: guide?.kicker || "Panduan",
+    title: guide?.title || "Panduan bertani, dari olah tanah sampai pasar.",
+    text: guide?.text || "Empat langkah praktis dalam satu musim tanam. Ikuti berurutan, atau mulai dari tahap yang sedang kamu hadapi.",
+    items: guide?.items || (DEFAULT_GUIDE as OvsGuide[]),
+  }
+  const ar = articles === null ? null : {
+    kicker: articles?.kicker || "Catatan lapangan",
+    title: articles?.title || "Artikel pertanian, dari pupuk sampai tanaman.",
+    text: articles?.text || "Panduan singkat soal pupuk, obat-obatan tanaman, dan cara merawat tanaman. Ditulis untuk dipakai di lahan, bukan sekadar dibaca.",
+    items: articles?.items || (DEFAULT_ARTICLES as OvsArticle[]),
+  }
   const fq = faq === null ? null : { kicker: faq?.kicker || "Questions", title: faq?.title || "Things founders ask us first.", text: faq?.text || "Anything else, write to us. A founder answers every email.", items: faq?.items || DEFAULT_FAQ }
   const ft = footer === null ? null : {
     columns: footer?.columns || DEFAULT_FOOTER.columns,
@@ -1456,10 +1580,15 @@ export default function OverstoryStudioLanding({
   }
   const pal = SEASONS[season] || SEASONS.summer
 
+  // section numbers follow whichever sections actually render
+  let sectionNo = ap ? 3 : 2
+  const nextSection = () => String(++sectionNo).padStart(2, "0")
+
   const [scheme, setScheme] = React.useState("light" as "light" | "dark")
   const [override, setOverride] = React.useState(null as null | "light" | "dark")
   const [still, setStill] = React.useState(false)
   const [menu, setMenu] = React.useState(false)
+  const [drop, setDrop] = React.useState<string | null>(null)
   const [photoFail, setPhotoFail] = React.useState(false)
   const usePhoto = !!photo && !photoFail
   const [active, setActive] = React.useState("")
@@ -1559,6 +1688,24 @@ export default function OverstoryStudioLanding({
       io.disconnect()
     }
   }, [])
+
+  // catalog dropdown: closes on outside click or Escape
+  const dropRef = React.useRef(null as HTMLDivElement | null)
+  React.useEffect(() => {
+    if (!drop) return
+    const onDoc = (e: MouseEvent) => {
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) setDrop(null)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDrop(null)
+    }
+    document.addEventListener("mousedown", onDoc)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onDoc)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [drop])
 
   // phone menu: Escape closes, focus moves in and comes back
   const menuBtn = React.useRef(null as HTMLButtonElement | null)
@@ -1941,7 +2088,7 @@ export default function OverstoryStudioLanding({
   useIso(() => {
     const section = root.current?.querySelector<HTMLElement>(".ovs-app")
     if (!section || still) return
-    const phone = section.querySelector<HTMLElement>(".ovs-app-phone")
+    const phones = section.querySelectorAll<HTMLElement>(".ovs-app-phone")
     const glow = section.querySelector<HTMLElement>(".ovs-app-glow")
     const ring = section.querySelector<HTMLElement>(".ovs-app-ring")
     const chip = section.querySelector<HTMLElement>(".ovs-app-chip")
@@ -1950,7 +2097,15 @@ export default function OverstoryStudioLanding({
       const tl = gsap.timeline({
         scrollTrigger: { trigger: section, start: "top bottom", end: "bottom top", scrub: 1 },
       })
-      if (phone) tl.fromTo(phone, { y: 46, rotate: -3.7 }, { y: -46, rotate: -1.3, duration: 1, ease: "none" }, 0)
+      phones.forEach((phone) => {
+        const back = phone.classList.contains("ovs-app-phone-android")
+        tl.fromTo(
+          phone,
+          { y: 46, rotate: back ? 3.6 : -4.8 },
+          { y: -46, rotate: back ? 7 : -1.6, duration: 1, ease: "none" },
+          0,
+        )
+      })
       if (glow) tl.fromTo(glow, { y: 30, scale: 0.96 }, { y: -30, scale: 1.04, duration: 1, ease: "none" }, 0)
       if (ring) tl.fromTo(ring, { y: 24, rotate: -7 }, { y: -24, rotate: 7, duration: 1, ease: "none" }, 0)
       if (chip) tl.fromTo(chip, { y: 28, x: 8 }, { y: -28, x: -8, duration: 1, ease: "none" }, 0)
@@ -2014,11 +2169,46 @@ export default function OverstoryStudioLanding({
             <span>{brand}</span>
           </a>
           <nav className="ovs-links" aria-label="Main">
-            {links.map((l) => (
-              <a key={l.label} href={l.href || "#"} onClick={go(l.href)} data-on={l.href && active === l.href.slice(1) ? "" : undefined}>
-                {l.label}
-              </a>
-            ))}
+            {links.map((l) =>
+              l.items && l.items.length ? (
+                <div key={l.label} className="ovs-drop" ref={drop === l.label ? dropRef : undefined}>
+                  <button
+                    type="button"
+                    className="ovs-drop-btn"
+                    aria-expanded={drop === l.label}
+                    aria-haspopup="true"
+                    data-on={(l.items.some((it) => it.href && active === it.href.slice(1)) || (l.href && active === l.href.slice(1))) ? "" : undefined}
+                    onClick={() => setDrop((d) => (d === l.label ? null : l.label))}
+                  >
+                    {l.label}
+                    <svg className="ovs-caret" viewBox="0 0 12 12" aria-hidden="true">
+                      <path d="M3 4.75 6 7.75l3-3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  {drop === l.label ? (
+                    <div className="ovs-drop-panel" role="menu">
+                      {l.items.map((it) => (
+                        <a
+                          key={it.label}
+                          role="menuitem"
+                          href={it.href || "#"}
+                          onClick={(e) => {
+                            setDrop(null)
+                            go(it.href)(e)
+                          }}
+                        >
+                          {it.label}
+                        </a>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <a key={l.label} href={l.href || "#"} onClick={go(l.href)} data-on={l.href && active === l.href.slice(1) ? "" : undefined}>
+                  {l.label}
+                </a>
+              ),
+            )}
           </nav>
           <div className="ovs-nav-end">
             {themeToggle ? (
@@ -2047,12 +2237,34 @@ export default function OverstoryStudioLanding({
         </div>
       </header>
       <div id={uid + "menu"} ref={sheet} className="ovs-sheet" role="dialog" aria-modal="true" aria-label="Menu" data-open={menu ? "" : undefined} hidden={!menu}>
-        {links.map((l, i) => (
-          <a key={l.label} href={l.href || "#"} onClick={go(l.href)} style={{ "--i": i } as React.CSSProperties}>
-            <span>0{i + 1}</span>
-            {l.label}
-          </a>
-        ))}
+        {links.map((l, i) =>
+          l.items && l.items.length ? (
+            <div key={l.label} className="ovs-sheet-group" style={{ "--i": i } as React.CSSProperties}>
+              <span className="ovs-sheet-label">
+                <span>0{i + 1}</span>
+                {l.label}
+              </span>
+              {l.items.map((it) => (
+                <a
+                  key={it.label}
+                  className="ovs-sheet-sub"
+                  href={it.href || "#"}
+                  onClick={(e) => {
+                    setMenu(false)
+                    go(it.href)(e)
+                  }}
+                >
+                  {it.label}
+                </a>
+              ))}
+            </div>
+          ) : (
+            <a key={l.label} href={l.href || "#"} onClick={go(l.href)} style={{ "--i": i } as React.CSSProperties}>
+              <span>0{i + 1}</span>
+              {l.label}
+            </a>
+          ),
+        )}
         <a href="#contact" className="ovs-btn ovs-btn-dark" onClick={book("menu")} style={{ "--i": links.length } as React.CSSProperties}>
           Book a call <Arrow />
         </a>
@@ -2281,13 +2493,77 @@ export default function OverstoryStudioLanding({
           </section>
         ) : null}
 
+        {/* ------------------------------------------------------- features */}
+        {fr ? (
+          <section id="features" className="ovs-sec ovs-features" data-sec="features" aria-labelledby={uid + "fr"}>
+            <div className="ovs-wrap">
+              <div className="ovs-head">
+                <div>
+                  <Kicker n={nextSection()} text={fr.kicker} />
+                  <span id={uid + "fr"}>
+                    <Split text={fr.title} className="ovs-h2" />
+                  </span>
+                </div>
+                <div className="ovs-head-side" data-rv>
+                  <p className="ovs-lede">{fr.text}</p>
+                </div>
+              </div>
+              <div className="ovs-feat-grid">
+                {fr.items.map((f, i) => (
+                  <article key={f.title + i} className="ovs-feat" data-rv>
+                    <span className="ovs-feat-n">{String(i + 1).padStart(2, "0")}</span>
+                    <h3>{f.title}</h3>
+                    <p>{f.text}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {/* ------------------------------------------------------- products */}
+        {pd ? (
+          <section id="products" className="ovs-sec ovs-products" data-sec="products" aria-labelledby={uid + "pd"}>
+            <div className="ovs-wrap">
+              <div className="ovs-head">
+                <div>
+                  <Kicker n={nextSection()} text={pd.kicker} />
+                  <span id={uid + "pd"}>
+                    <Split text={pd.title} className="ovs-h2" />
+                  </span>
+                </div>
+                <div className="ovs-head-side" data-rv>
+                  <p className="ovs-lede">{pd.text}</p>
+                </div>
+              </div>
+              <div className="ovs-prod-grid">
+                {pd.items.map((p, i) => (
+                  <article key={p.name + i} className="ovs-prod" data-rv>
+                    <a href={p.href || "#contact"} onClick={p.href ? undefined : go("#contact")} className="ovs-prod-link">
+                      <div className="ovs-prod-art">
+                        {p.image ? <img src={p.image} alt={p.imageAlt || p.name} loading="lazy" width={1000} height={700} /> : null}
+                        <span className="ovs-prod-cat">{p.category}</span>
+                      </div>
+                      <div className="ovs-prod-body">
+                        <h3>{p.name}</h3>
+                        {p.note ? <span className="ovs-prod-note">{p.note}</span> : null}
+                        <b className="ovs-prod-price">{p.price}</b>
+                      </div>
+                    </a>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         {/* ----------------------------------------------------------- work */}
         {wk ? (
           <section className="ovs-work" data-work data-sec="work" aria-labelledby={uid + "wk"}>
             <div className="ovs-work-stage" data-workstage>
               <div className="ovs-wrap ovs-work-head">
                 <div>
-                  <Kicker n={ap ? "04" : "03"} text={wk.kicker} />
+                  <Kicker n={nextSection()} text={wk.kicker} />
                   <span id={uid + "wk"}>
                     <Split text={wk.title} className="ovs-h2" />
                   </span>
@@ -2339,11 +2615,103 @@ export default function OverstoryStudioLanding({
           </section>
         ) : null}
 
+        {/* -------------------------------------------------------- gallery */}
+        {ga ? (
+          <section id="gallery" className="ovs-sec ovs-gallery" data-sec="gallery" aria-labelledby={uid + "ga"}>
+            <div className="ovs-wrap">
+              <div className="ovs-head">
+                <div>
+                  <Kicker n={nextSection()} text={ga.kicker} />
+                  <span id={uid + "ga"}>
+                    <Split text={ga.title} className="ovs-h2" />
+                  </span>
+                </div>
+                <div className="ovs-head-side" data-rv>
+                  <p className="ovs-lede">{ga.text}</p>
+                </div>
+              </div>
+              <div className="ovs-gal-grid">
+                {ga.items.map((g, i) => (
+                  <figure key={g.image + i} className="ovs-gal" data-rv>
+                    <img src={g.image} alt={g.alt || g.caption || ""} loading="lazy" width={1000} height={700} />
+                    {g.caption ? <figcaption>{g.caption}</figcaption> : null}
+                  </figure>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {/* ------------------------------------------------------- articles */}
+        {ar ? (
+          <section id="articles" className="ovs-sec ovs-articles" data-sec="articles" aria-labelledby={uid + "ar"}>
+            <div className="ovs-wrap">
+              <div className="ovs-articles-head">
+                <div>
+                  <Kicker n={nextSection()} text={ar.kicker} />
+                  <span id={uid + "ar"}>
+                    <Split text={ar.title} className="ovs-h2" />
+                  </span>
+                </div>
+                {ar.text ? <p className="ovs-lede ovs-articles-lede" data-rv>{ar.text}</p> : null}
+              </div>
+              <div className="ovs-articles-grid">
+                {ar.items.map((a, i) => (
+                  <article key={a.title + i} className="ovs-art" data-rv>
+                    <a href={a.href || "#contact"} onClick={a.href ? undefined : go("#contact")} className="ovs-art-link">
+                      <div className="ovs-art-art">
+                        {a.image ? <img src={a.image} alt={a.imageAlt || a.title} loading="lazy" width={1000} height={700} /> : null}
+                      </div>
+                      <div className="ovs-art-body">
+                        <span className="ovs-art-cat">{a.category}</span>
+                        <h3 className="ovs-art-title">{a.title}</h3>
+                        <p className="ovs-art-ex">{a.excerpt}</p>
+                        <div className="ovs-art-meta">
+                          <span>{a.date}{a.read ? " · " + a.read : ""}</span>
+                          <span className="ovs-art-more">Baca <Arrow /></span>
+                        </div>
+                      </div>
+                    </a>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {/* ---------------------------------------------------------- guide */}
+        {gu ? (
+          <section id="guide" className="ovs-sec ovs-guide" data-sec="guide" aria-labelledby={uid + "gu"}>
+            <div className="ovs-wrap">
+              <div className="ovs-head">
+                <div>
+                  <Kicker n={nextSection()} text={gu.kicker} />
+                  <span id={uid + "gu"}>
+                    <Split text={gu.title} className="ovs-h2" />
+                  </span>
+                </div>
+                <div className="ovs-head-side" data-rv>
+                  <p className="ovs-lede">{gu.text}</p>
+                </div>
+              </div>
+              <div className="ovs-guide-grid">
+                {gu.items.map((s, i) => (
+                  <article key={s.title + i} className="ovs-guide-step" data-rv>
+                    {s.meta ? <span className="ovs-guide-meta">{s.meta}</span> : null}
+                    <h3>{s.title}</h3>
+                    <p>{s.text}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         {/* -------------------------------------------------------- process */}
         {pr ? (
           <section className="ovs-sec ovs-process" data-process data-sec="process" aria-labelledby={uid + "pr"}>
             <div className="ovs-wrap">
-              <Kicker n={ap ? "05" : "04"} text={pr.kicker} />
+              <Kicker n={nextSection()} text={pr.kicker} />
               <span id={uid + "pr"}>
                 <Split text={pr.title} className="ovs-h2 ovs-h2-wide" />
               </span>
@@ -2440,7 +2808,7 @@ export default function OverstoryStudioLanding({
             <div className="ovs-wrap">
               <div className="ovs-head">
                 <div>
-                  <Kicker n={ap ? "06" : "05"} text={pc.kicker} />
+                  <Kicker n={nextSection()} text={pc.kicker} />
                   <span id={uid + "pc"}>
                     <Split text={pc.title} className="ovs-h2" />
                   </span>
@@ -2514,7 +2882,7 @@ export default function OverstoryStudioLanding({
           <section className="ovs-sec ovs-faq" data-sec="faq" aria-labelledby={uid + "fq"}>
             <div className="ovs-wrap ovs-faq-grid">
               <div>
-                <Kicker n={ap ? (pricingContent ? "06" : "07") : pricingContent ? "05" : "06"} text={fq.kicker} />
+                <Kicker n={nextSection()} text={fq.kicker} />
                 <span id={uid + "fq"}>
                   <Split text={fq.title} className="ovs-h2" />
                 </span>
@@ -2692,6 +3060,18 @@ const OVS_CSS = `
 .ovs-links a{position:relative;padding:8px 14px;border-radius:999px;font-size:14.5px;font-weight:500;opacity:.78;transition:opacity .3s,background .4s}
 .ovs-links a:hover{opacity:1}
 .ovs-links a[data-on]{opacity:1;background:color-mix(in oklab,currentColor 9%,transparent)}
+.ovs-links a{white-space:nowrap}
+.ovs-drop{position:relative;display:flex}
+.ovs-drop-btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border:0;border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:14.5px;font-weight:500;line-height:inherit;opacity:.78;cursor:pointer;white-space:nowrap;transition:opacity .3s,background .4s}
+.ovs-drop-btn:hover{opacity:1}
+.ovs-drop-btn[data-on]{opacity:1;background:color-mix(in oklab,currentColor 9%,transparent)}
+.ovs-drop-btn[aria-expanded="true"]{opacity:1;background:color-mix(in oklab,currentColor 9%,transparent)}
+.ovs-drop-btn:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.ovs-caret{width:11px;height:11px;flex:none;transition:transform .3s}
+.ovs-drop-btn[aria-expanded="true"] .ovs-caret{transform:rotate(180deg)}
+.ovs-drop-panel{position:absolute;top:calc(100% + 10px);left:50%;transform:translateX(-50%);z-index:70;min-width:230px;display:flex;flex-direction:column;gap:2px;padding:8px;border-radius:18px;background:var(--ovs-card);border:1px solid var(--ovs-line);box-shadow:0 26px 52px -30px rgba(10,20,8,.45),0 2px 6px rgba(10,20,8,.06)}
+.ovs-links .ovs-drop-panel a{padding:9px 12px;border-radius:11px;font-size:14px;font-weight:500;opacity:.8;white-space:nowrap;transition:background .25s,opacity .25s}
+.ovs-links .ovs-drop-panel a:hover,.ovs-links .ovs-drop-panel a:focus-visible{opacity:1;background:color-mix(in oklab,currentColor 8%,transparent);outline:none}
 .ovs-nav-end{display:flex;align-items:center;gap:8px}
 .ovs-icon-btn{width:42px;height:42px;border-radius:999px;display:grid;place-items:center;transition:background .3s}
 .ovs-icon-btn:hover{background:color-mix(in oklab,currentColor 10%,transparent)}
@@ -2705,6 +3085,10 @@ const OVS_CSS = `
 .ovs-sheet a{font-size:clamp(34px,9vw,52px);font-weight:500;letter-spacing:-.04em;display:flex;align-items:baseline;gap:14px;animation:ovs-in .7s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i) * 60ms)}
 .ovs-sheet a span{font-size:13px;letter-spacing:0;color:var(--ovs-ink2)}
 .ovs-sheet .ovs-btn{font-size:16px;letter-spacing:0;margin-top:24px;align-self:flex-start}
+.ovs-sheet-group{display:flex;flex-direction:column;gap:4px;animation:ovs-in .7s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i) * 60ms)}
+.ovs-sheet-label{display:flex;align-items:baseline;gap:14px;font-size:clamp(34px,9vw,52px);font-weight:500;letter-spacing:-.04em}
+.ovs-sheet-label>span{font-size:13px;letter-spacing:0;color:var(--ovs-ink2)}
+.ovs-sheet .ovs-sheet-sub{padding-left:34px;font-size:clamp(19px,4.4vw,24px);font-weight:500;letter-spacing:-.02em;color:var(--ovs-ink2);animation:none}
 @keyframes ovs-in{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:none}}
 
 /* buttons */
@@ -2850,40 +3234,109 @@ const OVS_CSS = `
 .ovs-svc-body li{font-size:13.5px;padding:6px 13px;border-radius:999px;background:var(--ovs-card);border:1px solid var(--ovs-line)}
 
 /* app */
-.ovs-app{position:relative;background:var(--ovs-forest);color:#edf1e6;padding:clamp(70px,8vw,110px) 0;overflow:hidden}
-.ovs-app::before{content:"";position:absolute;inset:0;background:radial-gradient(58% 70% at 78% 46%,rgba(196,220,82,.16),transparent 66%),radial-gradient(48% 60% at 10% 0%,rgba(196,220,82,.07),transparent 70%);pointer-events:none}
-.ovs-app::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(237,241,230,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(237,241,230,.04) 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(56% 68% at 72% 50%,#000,transparent 78%);-webkit-mask-image:radial-gradient(56% 68% at 72% 50%,#000,transparent 78%);pointer-events:none}
+.ovs-app{position:relative;background:var(--ovs-card);color:var(--ovs-ink);padding:clamp(70px,8vw,110px) 0;overflow:hidden}
+.ovs-app::before{content:"";position:absolute;inset:0;background:radial-gradient(58% 70% at 78% 46%,rgba(61,106,18,.055),transparent 66%),radial-gradient(48% 60% at 10% 0%,rgba(61,106,18,.03),transparent 70%);pointer-events:none}
+.ovs-app::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(16,21,13,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(16,21,13,.045) 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(56% 68% at 72% 50%,#000,transparent 78%);-webkit-mask-image:radial-gradient(56% 68% at 72% 50%,#000,transparent 78%);pointer-events:none}
 .ovs-app-grid{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.82fr);gap:clamp(40px,6vw,90px);align-items:center}
 .ovs-app-grid-solo{grid-template-columns:minmax(0,1fr);max-width:760px}
 .ovs-app-copy{position:relative;z-index:1}
-.ovs-app .ovs-kicker{color:rgba(237,241,230,.62)}
-.ovs-app .ovs-kicker-n{color:var(--ovs-soft)}
-.ovs-app .ovs-h2{color:#edf1e6;max-width:12em}
-.ovs-app .ovs-lede{color:rgba(237,241,230,.68);margin-top:24px;max-width:33em}
+.ovs-app .ovs-kicker{color:var(--ovs-ink2)}
+.ovs-app .ovs-kicker-n{color:var(--ovs-accent)}
+.ovs-app .ovs-h2{color:var(--ovs-ink);max-width:12em}
+.ovs-app .ovs-lede{color:var(--ovs-ink2);margin-top:24px;max-width:33em}
 .ovs-app-points{display:flex;flex-direction:column;gap:14px;margin-top:30px}
-.ovs-app-points li{display:flex;gap:12px;align-items:flex-start;font-size:clamp(14.5px,1.15vw,16.5px);line-height:1.4;color:rgba(237,241,230,.9)}
-.ovs-app-points .ovs-svg{width:17px;height:17px;flex:none;margin-top:2px;color:var(--ovs-soft)}
+.ovs-app-points li{display:flex;gap:12px;align-items:flex-start;font-size:clamp(14.5px,1.15vw,16.5px);line-height:1.4;color:var(--ovs-ink)}
+.ovs-app-points .ovs-svg{width:17px;height:17px;flex:none;margin-top:2px;color:var(--ovs-accent)}
 .ovs-app-actions{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:34px}
 .ovs-app .ovs-btn-lime{background:var(--ovs-soft);color:#10150d;border-color:transparent}
 .ovs-app .ovs-btn-lime:hover{box-shadow:0 14px 36px -12px rgba(196,220,82,.55)}
-.ovs-app-note{font-size:12.5px;letter-spacing:.01em;color:rgba(237,241,230,.5)}
-.ovs-app-proof{display:flex;align-items:center;gap:9px;margin-top:26px;font-size:12.5px;letter-spacing:.01em;color:rgba(237,241,230,.48)}
-.ovs-app-proof i{width:6px;height:6px;flex:none;border-radius:50%;background:var(--ovs-soft);box-shadow:0 0 0 0 rgba(196,220,82,.5);animation:ovs-app-pulse 2.2s infinite}
+.ovs-app-note{font-size:12.5px;letter-spacing:.01em;color:var(--ovs-ink2)}
+.ovs-app-proof{display:flex;align-items:center;gap:9px;margin-top:26px;font-size:12.5px;letter-spacing:.01em;color:var(--ovs-ink2)}
+.ovs-app-proof i{width:6px;height:6px;flex:none;border-radius:50%;background:var(--ovs-accent);box-shadow:0 0 0 0 rgba(61,106,18,.45);animation:ovs-app-pulse 2.2s infinite}
 .ovs-app-visual{position:relative;display:flex;align-items:center;justify-content:center;min-height:560px;isolation:isolate}
 .ovs-app-glow-wrap{position:absolute;inset:0;display:grid;place-items:center;z-index:0;pointer-events:none}
-.ovs-app-glow{width:min(100%,480px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(196,220,82,.28),rgba(196,220,82,0) 66%);filter:blur(20px);will-change:transform}
+.ovs-app-glow{width:min(100%,480px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(61,106,18,.12),rgba(61,106,18,0) 66%);filter:blur(20px);will-change:transform}
 .ovs-app-orbit{position:absolute;inset:0;display:grid;place-items:center;z-index:0;pointer-events:none}
-.ovs-app-ring{position:relative;width:min(100%,540px);aspect-ratio:1;border-radius:50%;border:1px solid rgba(196,220,82,.16);box-shadow:0 0 0 44px rgba(196,220,82,.025),inset 0 0 70px rgba(196,220,82,.04);will-change:transform}
-.ovs-app-ring::before{content:"";position:absolute;inset:11%;border-radius:50%;border:1px dashed rgba(196,220,82,.13)}
-.ovs-app-ring::after{content:"";position:absolute;left:50%;top:-4px;width:7px;height:7px;border-radius:50%;background:var(--ovs-soft);box-shadow:0 0 18px rgba(196,220,82,.8);transform:translateX(-50%)}
-.ovs-app-phone-wrap{position:relative;z-index:2;width:min(100%,340px);animation:ovs-app-float 7s ease-in-out infinite}
-.ovs-app-phone-wrap::after{content:"";position:absolute;left:50%;bottom:-30px;width:76%;height:24px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse,rgba(0,0,0,.55),transparent 70%);filter:blur(9px);z-index:-1;pointer-events:none}
-.ovs-app-phone{width:100%;filter:drop-shadow(0 44px 70px rgba(0,0,0,.5));transform:rotate(-2.5deg);--phone-notch:#0e1a10;--phone-notch-dot:#1c2a1e;will-change:transform}
+.ovs-app-ring{position:relative;width:min(100%,540px);aspect-ratio:1;border-radius:50%;border:1px solid rgba(61,106,18,.16);box-shadow:0 0 0 44px rgba(16,21,13,.018),inset 0 0 70px rgba(61,106,18,.04);will-change:transform}
+.ovs-app-ring::before{content:"";position:absolute;inset:11%;border-radius:50%;border:1px dashed rgba(61,106,18,.14)}
+.ovs-app-ring::after{content:"";position:absolute;left:50%;top:-4px;width:7px;height:7px;border-radius:50%;background:var(--ovs-leaf2);box-shadow:0 0 18px rgba(61,106,18,.45);transform:translateX(-50%)}
+.ovs-app-phone-wrap{position:relative;z-index:2;width:min(100%,480px);animation:ovs-app-float 7s ease-in-out infinite}
+.ovs-app-phone-wrap::after{content:"";position:absolute;left:34%;bottom:-26px;width:64%;height:24px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse,rgba(16,21,13,.22),transparent 70%);filter:blur(9px);z-index:-1;pointer-events:none}
+.ovs-app-phones{position:relative;width:100%}
+.ovs-app-phone{filter:drop-shadow(0 44px 70px rgba(16,21,13,.28));will-change:transform}
+.ovs-app-phone-ios{position:relative;z-index:2;width:62%;transform:rotate(-3.2deg);--phone-notch:#0e1a10;--phone-notch-dot:#1c2a1e}
+.ovs-app-phone-android{position:absolute;right:0;top:11%;z-index:1;width:52%;transform:rotate(6.5deg)}
 .ovs-app-glare{position:absolute;inset:-30% -35%;z-index:5;pointer-events:none;background:linear-gradient(112deg,transparent 36%,rgba(255,255,255,.04) 44%,rgba(255,255,255,.2) 49%,rgba(255,255,255,.05) 54%,transparent 63%);mix-blend-mode:screen;opacity:.4;transform:translateX(-18%)}
-.ovs-app-chip{position:absolute;right:max(0px,calc(50% - 210px));top:12%;display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;background:rgba(244,246,240,.94);color:#10150d;font-size:11.5px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;box-shadow:0 14px 30px -12px rgba(0,0,0,.4);z-index:3}
+.ovs-app-chip{position:absolute;right:2%;top:0;display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;background:#fff;border:1px solid rgba(16,21,13,.08);color:#10150d;font-size:11.5px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;box-shadow:0 14px 30px -12px rgba(16,21,13,.22);z-index:3}
 .ovs-app-chip i{width:7px;height:7px;border-radius:50%;background:#5f8a3a;box-shadow:0 0 0 0 rgba(95,138,58,.5);animation:ovs-app-pulse 2.2s infinite}
 @keyframes ovs-app-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 @keyframes ovs-app-pulse{0%{box-shadow:0 0 0 0 rgba(95,138,58,.5)}70%{box-shadow:0 0 0 8px rgba(95,138,58,0)}100%{box-shadow:0 0 0 0 rgba(95,138,58,0)}}
+
+/* features */
+.ovs-features{position:relative;background:var(--ovs-paper)}
+.ovs-feat-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(14px,1.5vw,20px)}
+.ovs-feat{padding:26px 24px 28px;border-radius:22px;background:var(--ovs-card);border:1px solid var(--ovs-line);transition:transform .5s cubic-bezier(.2,.8,.2,1),box-shadow .5s cubic-bezier(.2,.8,.2,1)}
+.ovs-feat:hover{transform:translateY(-4px);box-shadow:0 22px 44px -32px rgba(16,21,13,.35)}
+.ovs-feat-n{display:block;font-size:11.5px;font-weight:600;letter-spacing:.1em;color:var(--ovs-accent)}
+.ovs-feat h3{margin:14px 0 8px;font-size:clamp(17px,1.4vw,20px);line-height:1.2;letter-spacing:-.025em;font-weight:500;color:var(--ovs-ink)}
+.ovs-feat p{margin:0;font-size:14px;line-height:1.55;color:var(--ovs-ink2)}
+
+/* products */
+.ovs-products{position:relative;background:var(--ovs-paper)}
+.ovs-prod-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(14px,1.6vw,22px)}
+.ovs-prod{display:flex;min-width:0}
+.ovs-prod-link{display:flex;flex-direction:column;flex:1;min-width:0;border-radius:22px;overflow:hidden;background:var(--ovs-card);border:1px solid var(--ovs-line);transition:transform .5s cubic-bezier(.2,.8,.2,1),box-shadow .5s cubic-bezier(.2,.8,.2,1)}
+.ovs-prod-link:hover{transform:translateY(-4px);box-shadow:0 22px 44px -32px rgba(16,21,13,.35)}
+.ovs-prod-art{position:relative;aspect-ratio:4/3;overflow:hidden;background:var(--ovs-mist)}
+.ovs-prod-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;transition:transform 1s cubic-bezier(.2,.8,.2,1)}
+.ovs-prod-link:hover .ovs-prod-art img{transform:scale(1.05)}
+.ovs-prod-cat{position:absolute;left:10px;top:10px;z-index:1;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.92);color:#3d6a12;font-size:11px;font-weight:600;letter-spacing:.02em;white-space:nowrap}
+.ovs-prod-body{display:flex;flex-direction:column;gap:3px;padding:16px 18px 18px}
+.ovs-prod-body h3{margin:0;font-size:16px;line-height:1.25;letter-spacing:-.02em;font-weight:500;color:var(--ovs-ink)}
+.ovs-prod-note{font-size:12.5px;color:var(--ovs-ink2)}
+.ovs-prod-price{margin-top:8px;font-size:15px;font-weight:600;letter-spacing:-.01em;color:var(--ovs-accent)}
+
+/* gallery */
+.ovs-gallery{position:relative;background:var(--ovs-paper)}
+.ovs-gal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(10px,1.2vw,16px)}
+.ovs-gal{position:relative;margin:0;overflow:hidden;border-radius:18px;background:var(--ovs-mist);aspect-ratio:4/3}
+.ovs-gal img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;transition:transform 1s cubic-bezier(.2,.8,.2,1)}
+.ovs-gal:hover img{transform:scale(1.06)}
+.ovs-gal figcaption{position:absolute;inset:auto 0 0 0;padding:30px 16px 14px;font-size:12.5px;font-weight:500;color:#f4f6f0;background:linear-gradient(transparent,rgba(8,18,6,.7))}
+
+/* guide */
+.ovs-guide{position:relative;background:var(--ovs-paper)}
+.ovs-guide-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(16px,1.8vw,24px)}
+.ovs-guide-step{padding-top:18px;border-top:1px solid var(--ovs-line)}
+.ovs-guide-meta{display:inline-block;margin-bottom:12px;padding:3px 9px;border-radius:999px;background:#eef3dd;color:#3d6a12;font-size:11px;font-weight:600;letter-spacing:.02em}
+.ovs-guide-step h3{margin:0 0 8px;font-size:clamp(17px,1.4vw,20px);line-height:1.2;letter-spacing:-.025em;font-weight:500;color:var(--ovs-ink)}
+.ovs-guide-step p{margin:0;font-size:13.5px;line-height:1.55;color:var(--ovs-ink2)}
+
+@media (max-width:960px){.ovs-feat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ovs-prod-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ovs-guide-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.ovs-feat-grid{grid-template-columns:minmax(0,1fr)}.ovs-prod-grid{grid-template-columns:minmax(0,1fr)}.ovs-gal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ovs-guide-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* articles */
+.ovs-articles{position:relative;background:var(--ovs-paper)}
+.ovs-articles-head{display:flex;justify-content:space-between;align-items:flex-end;gap:clamp(24px,4vw,60px);margin-bottom:clamp(28px,3.5vw,46px)}
+.ovs-articles-head .ovs-h2{font-size:clamp(30px,3.6vw,52px)}
+.ovs-articles-lede{max-width:32em;margin:0 0 6px;flex:none}
+.ovs-articles-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(16px,1.6vw,24px)}
+.ovs-art{display:flex;min-width:0}
+.ovs-art-link{display:flex;flex-direction:column;flex:1;min-width:0;background:var(--ovs-card);border:1px solid var(--ovs-line);border-radius:22px;overflow:hidden;transition:transform .5s cubic-bezier(.2,.8,.2,1),box-shadow .5s cubic-bezier(.2,.8,.2,1),border-color .5s}
+.ovs-art-link:hover{transform:translateY(-5px);box-shadow:0 24px 50px -32px rgba(16,21,13,.4)}
+.ovs-art-art{position:relative;aspect-ratio:16/10;overflow:hidden;background:var(--ovs-mist)}
+.ovs-art-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;transition:transform 1s cubic-bezier(.2,.8,.2,1)}
+.ovs-art-link:hover .ovs-art-art img{transform:scale(1.05)}
+.ovs-art-body{display:flex;flex-direction:column;gap:8px;flex:1;padding:18px 20px 20px}
+.ovs-art-cat{align-self:flex-start;padding:4px 9px;border-radius:999px;background:#e9f0d2;color:#3d6a12;font-size:11px;font-weight:600;letter-spacing:.02em;white-space:nowrap}
+.ovs-art-title{font-size:clamp(16px,1.25vw,19px);line-height:1.25;letter-spacing:-.025em;font-weight:500;margin:0;color:var(--ovs-ink)}
+.ovs-art-ex{margin:0;font-size:13.5px;line-height:1.5;color:var(--ovs-ink2)}
+.ovs-art-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:12px;font-size:12px;color:var(--ovs-ink2)}
+.ovs-art-more{display:inline-flex;align-items:center;gap:4px;font-weight:600;color:var(--ovs-ink)}
+.ovs-art-more .ovs-arrow{transition:transform .4s cubic-bezier(.2,.8,.2,1)}
+.ovs-art-link:hover .ovs-art-more .ovs-arrow{transform:translateX(3px)}
+@media (max-width:960px){.ovs-articles-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.ovs-articles-head{flex-direction:column;align-items:flex-start;gap:18px}.ovs-articles-grid{grid-template-columns:minmax(0,1fr)}}
 
 /* work */
 .ovs-work{position:relative;background:var(--ovs-paper)}
@@ -3085,9 +3538,9 @@ const OVS_CSS = `
 
 /* responsive */
 @media (max-width:1020px){.ovs-links{display:none}.ovs-burger{display:flex}.ovs-nav-in{justify-content:space-between}.ovs-plans{grid-template-columns:1fr;max-width:520px}.ovs-stats{grid-template-columns:repeat(2,1fr);row-gap:40px}.ovs-foot-top{grid-template-columns:1fr}.ovs-svc-time{display:none}.ovs-svc-h button{grid-template-columns:44px 1fr 40px}.ovs-svc-body{grid-template-columns:44px 1fr}}
-@media (max-width:900px){.ovs-app-grid{grid-template-columns:1fr;gap:56px}.ovs-app-visual{order:2;min-height:0}.ovs-app-copy{order:1}.ovs-app-phone-wrap{width:min(100%,320px)}.ovs-app-chip{right:auto;left:calc(50% + 70px);top:7%}}
-@media (max-width:820px){.ovs-proc-grid{grid-template-columns:1fr}.ovs-tree-col{display:none}.ovs-step{opacity:1;min-height:0}.ovs-faq-grid{grid-template-columns:1fr}.ovs-foot-cols{grid-template-columns:repeat(2,1fr);row-gap:36px}.ovs-card-meta{grid-template-columns:1fr}.ovs-card-metric{text-align:left;align-items:flex-start}.ovs-svc-prev{display:none}.ovs-app-grid{grid-template-columns:1fr;gap:56px}.ovs-app-visual{order:2;min-height:0}.ovs-app-copy{order:1}.ovs-app-phone-wrap{width:min(100%,300px)}.ovs-app-chip{right:auto;left:calc(50% + 70px);top:7%}}
-@media (max-width:560px){.ovs-root[data-photo] .ovs-copy::before{left:-4%;right:-4%;top:-14%;bottom:-14%}.ovs-nav-cta{display:none}.ovs-logo-row{column-gap:20px}.ovs-h1{font-size:clamp(36px,10.4vw,56px)}.ovs-quote figcaption{flex-wrap:wrap}.ovs-mock-phone{width:190px}.ovs-mk-kpis b{font-size:14px}.ovs-acc-item p{padding-right:0}.ovs-app{padding:64px 0 76px}.ovs-app-phone-wrap{width:min(100%,260px)}.ovs-app-chip{display:none}.ovs-app-actions{align-items:flex-start;flex-direction:column;gap:12px}.ovs-app .ovs-btn{width:100%;justify-content:center}}
+@media (max-width:900px){.ovs-app-grid{grid-template-columns:1fr;gap:56px}.ovs-app-visual{order:2;min-height:0}.ovs-app-copy{order:1}.ovs-app-phone-wrap{width:min(100%,400px)}.ovs-app-chip{right:auto;left:calc(50% + 70px);top:7%}}
+@media (max-width:820px){.ovs-proc-grid{grid-template-columns:1fr}.ovs-tree-col{display:none}.ovs-step{opacity:1;min-height:0}.ovs-faq-grid{grid-template-columns:1fr}.ovs-foot-cols{grid-template-columns:repeat(2,1fr);row-gap:36px}.ovs-card-meta{grid-template-columns:1fr}.ovs-card-metric{text-align:left;align-items:flex-start}.ovs-svc-prev{display:none}.ovs-app-grid{grid-template-columns:1fr;gap:56px}.ovs-app-visual{order:2;min-height:0}.ovs-app-copy{order:1}.ovs-app-phone-wrap{width:min(100%,380px)}.ovs-app-chip{right:auto;left:calc(50% + 70px);top:7%}}
+@media (max-width:560px){.ovs-root[data-photo] .ovs-copy::before{left:-4%;right:-4%;top:-14%;bottom:-14%}.ovs-nav-cta{display:none}.ovs-logo-row{column-gap:20px}.ovs-h1{font-size:clamp(36px,10.4vw,56px)}.ovs-quote figcaption{flex-wrap:wrap}.ovs-mock-phone{width:190px}.ovs-mk-kpis b{font-size:14px}.ovs-acc-item p{padding-right:0}.ovs-app{padding:64px 0 76px}.ovs-app-phone-wrap{width:min(100%,320px)}.ovs-app-chip{display:none}.ovs-app-actions{align-items:flex-start;flex-direction:column;gap:12px}.ovs-app .ovs-btn{width:100%;justify-content:center}}
 @media (prefers-reduced-motion:reduce){.ovs-sway,.ovs-sway-p,.ovs-status i,.ovs-clock i,.ovs-dapple i,.ovs-plan-ring,.ovs-cue-line::after,.ovs-sheet a,.ovs-app-phone-wrap,.ovs-app-chip i,.ovs-app-proof i{animation:none}.ovs-dots i{animation:none;transform:scaleX(1)}.ovs-fold,.ovs-svc-art,.ovs-svc-row::after,.ovs-svc-t,.ovs-seg-pill,.ovs-nav,.ovs-mock,.ovs-card-sun{transition:none}}
 `
 

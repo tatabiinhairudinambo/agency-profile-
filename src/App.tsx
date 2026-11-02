@@ -3,7 +3,9 @@
 import OverstoryStudioLanding from "./OverstoryStudioLanding"
 import { PricingBasic } from "@/components/ui/demo"
 import { Iphone } from "./components/ui/iphone"
+import { Android } from "./components/ui/android"
 import { TaniAppScreen } from "./components/TaniAppScreen"
+import { TaniProductsScreen } from "./components/TaniProductsScreen"
 
 export default function App() {
   return (
@@ -12,10 +14,21 @@ export default function App() {
       links={[
         { label: "Services", href: "#services" },
         { label: "App", href: "#app" },
-        { label: "Work", href: "#work" },
         { label: "Process", href: "#process" },
         { label: "Pricing", href: "#pricing" },
         { label: "FAQ", href: "#faq" },
+        { label: "Fitur Unggulan", href: "#features" },
+        {
+          label: "Lainnya",
+          href: "#features",
+          items: [
+            { label: "Produk Kami", href: "#products" },
+            { label: "Work", href: "#work" },
+            { label: "Galeri", href: "#gallery" },
+            { label: "Artikel", href: "#articles" },
+            { label: "Panduan", href: "#guide" },
+          ],
+        },
       ]}
       hero={{
         lead: "Smart Farming for",
@@ -84,10 +97,19 @@ export default function App() {
         chip: "Live field data",
         proof: "Built with farmers in Yogyakarta",
         visual: (
-          <Iphone className="ovs-app-phone">
-            <TaniAppScreen />
-            <span className="ovs-app-glare" aria-hidden="true" />
-          </Iphone>
+          <div className="ovs-app-phones">
+            <div className="ovs-app-phone ovs-app-phone-ios">
+              <Iphone>
+                <TaniAppScreen />
+                <span className="ovs-app-glare" aria-hidden="true" />
+              </Iphone>
+            </div>
+            <div className="ovs-app-phone ovs-app-phone-android">
+              <Android>
+                <TaniProductsScreen />
+              </Android>
+            </div>
+          </div>
         ),
       }}
       manifesto={{
