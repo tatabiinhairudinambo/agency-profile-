@@ -41,11 +41,13 @@ export type OvsStat = { value: number; prefix?: string; suffix?: string; decimal
 
 export type OvsServiceArt = "brand" | "product" | "site" | "code" | "system"
 
-export type OvsService = { title: string; text: string; tags: string[]; time: string; art?: OvsServiceArt }
+export type OvsService = { title: string; text: string; tags: string[]; time: string; art?: OvsServiceArt; image?: string; imageAlt?: string }
 
 export type OvsMock = "dashboard" | "chat" | "doc" | "mobile"
 
 export type OvsCase = {
+  image?: string
+  imageAlt?: string
   client: string
   mark?: OvsMark
   kind: string
@@ -82,6 +84,7 @@ export type OvsFaq = { q: string; a: string }
 export type OvsSeason = "summer" | "autumn" | "blossom"
 
 export interface OverstoryStudioLandingProps {
+  pricingContent?: React.ReactNode
   brand?: string
   /** In-page links. "#work", "#services", "#process", "#pricing", "#faq" and "#contact" scroll within the page. */
   links?: OvsLink[]
@@ -101,11 +104,24 @@ export interface OverstoryStudioLandingProps {
   manifesto?: { kicker?: string; text?: string } | null
   stats?: OvsStat[] | null
   services?: { kicker?: string; title?: string; text?: string; items?: OvsService[] } | null
-  work?: { kicker?: string; title?: string; items?: OvsCase[]; next?: string } | null
+  /** An optional product/app band. Pass `visual` to slot in a phone or screenshot. */
+  app?: {
+    kicker?: string
+    number?: string
+    title?: string
+    text?: string
+    points?: string[]
+    cta?: { label: string; href: string }
+    note?: string
+    chip?: string
+    proof?: string
+    visual?: React.ReactNode
+  } | null
+  work?: { kicker?: string; title?: string; items?: OvsCase[]; next?: string; nextCta?: string } | null
   process?: { kicker?: string; title?: string; steps?: OvsStep[] } | null
   quotes?: OvsQuote[] | null
   pricing?: { kicker?: string; title?: string; text?: string; plans?: OvsPlan[]; quarterlyNote?: string } | null
-  faq?: { kicker?: string; title?: string; text?: string; items?: OvsFaq[] } | null
+  faq?: { kicker?: string; title?: string; text?: string; items?: OvsFaq[]; contactLabel?: string } | null
   cta?: { title?: string; text?: string; button?: string } | null
   footer?: { columns?: { title: string; links: OvsLink[] }[]; city?: string; timeZone?: string; note?: string } | null
   email?: string
@@ -1070,6 +1086,14 @@ function Arrow() {
   )
 }
 
+function Tick() {
+  return (
+    <svg className="ovs-svg" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M3 8.4l3.2 3.2L13 5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 /** A button that leans toward the pointer. */
 function Magnet({ children, className, onClick, href, label }: { children: React.ReactNode; className: string; onClick?: (e: React.MouseEvent) => void; href?: string; label?: string }) {
   const ref = React.useRef(null as HTMLAnchorElement | null)
@@ -1365,10 +1389,12 @@ export default function OverstoryStudioLanding({
   manifesto = DEFAULT_MANIFESTO,
   stats = DEFAULT_STATS,
   services,
+  app,
   work,
   process,
   quotes = DEFAULT_QUOTES as OvsQuote[],
   pricing,
+  pricingContent,
   faq,
   cta = DEFAULT_CTA,
   footer = DEFAULT_FOOTER,
@@ -1394,10 +1420,23 @@ export default function OverstoryStudioLanding({
     text: services?.text || "Pick a single sprint or keep the whole crew. Either way you get senior people who have shipped this before.",
     items: services?.items || (DEFAULT_SERVICES as OvsService[]),
   }
+  const ap = app ? {
+    kicker: app.kicker || "The app",
+    number: app.number || "03",
+    title: app.title || "Your fields, in your pocket.",
+    text: app.text || "Field records, weather and harvest notes in one calm place, built for the way you actually work outside.",
+    points: app.points || [],
+    cta: app.cta || { label: "Join the waitlist", href: "#contact" },
+    note: app.note || "iOS & Android · coming soon",
+    chip: app.chip || "Live field data",
+    proof: app.proof || "Built with farmers in Yogyakarta",
+    visual: app.visual,
+  } : null
   const wk = work === null ? null : {
     kicker: work?.kicker || "Selected work",
     title: work?.title || "Products we helped grow.",
     next: work?.next || "Your product, next",
+    nextCta: work?.nextCta || "Start a project",
     items: work?.items || (DEFAULT_CASES as OvsCase[]),
   }
   const pr = process === null ? null : { kicker: process?.kicker || "How we work", title: process?.title || "From seed to canopy in eight weeks.", steps: process?.steps || DEFAULT_STEPS }
@@ -1429,7 +1468,7 @@ export default function OverstoryStudioLanding({
   const [quarterly, setQuarterly] = React.useState(false)
   const [faqOpen, setFaqOpen] = React.useState(0)
   const [quote, setQuote] = React.useState(0)
-  const [quotePaused, setQuotePaused] = React.useState(false)
+  const quoteScroll = React.useRef<ScrollTrigger | null>(null)
   const [copied, setCopied] = React.useState(false)
   const [mail, setMail] = React.useState("")
   const [mailState, setMailState] = React.useState("idle" as "idle" | "sending" | "done" | "error" | "invalid")
@@ -1478,15 +1517,30 @@ export default function OverstoryStudioLanding({
     const r = root.current
     if (!r) return
     let last = window.scrollY
+    let direction = 0
+    let travel = 0
     let raf = 0
     const onScroll = () => {
-      cancelAnimationFrame(raf)
+      if (raf) return
       raf = requestAnimationFrame(() => {
-        const y = window.scrollY
+        raf = 0
+        const y = Math.max(0, window.scrollY)
         const top = r.getBoundingClientRect().top + y
         r.toggleAttribute("data-solid", y > top + 40)
-        r.toggleAttribute("data-navhide", y > last + 4 && y > top + 400)
-        if (y < last - 4) r.removeAttribute("data-navhide")
+        const delta = y - last
+        if (y <= top + 400 || r.hasAttribute("data-menu")) {
+          r.removeAttribute("data-navhide")
+          direction = 0
+          travel = 0
+        } else if (Math.abs(delta) >= 1) {
+          const nextDirection = Math.sign(delta)
+          travel = nextDirection === direction ? travel + Math.abs(delta) : Math.abs(delta)
+          direction = nextDirection
+          if (travel >= (direction > 0 ? 48 : 24)) {
+            r.toggleAttribute("data-navhide", direction > 0)
+            travel = 0
+          }
+        }
         last = y
       })
     }
@@ -1673,7 +1727,21 @@ export default function OverstoryStudioLanding({
           const dec = Number(e.dataset.dec || 0)
           const o = { v: 0 }
           e.textContent = (e.dataset.pre || "") + formatNumber(0, dec) + (e.dataset.suf || "")
-          gsap.to(o, { v: to, duration: 2.2, ease: "expo.out", scrollTrigger: { trigger: e, start: "top 88%", once: true }, onUpdate: () => (e.textContent = (e.dataset.pre || "") + formatNumber(o.v, dec) + (e.dataset.suf || "")) })
+          gsap.to(o, {
+            v: to,
+            duration: 2.4,
+            ease: "power1.out",
+            scrollTrigger: {
+              trigger: e.closest(".ovs-stats"),
+              start: "top 85%",
+              end: "bottom top",
+              toggleActions: "restart complete restart reset",
+            },
+            onUpdate: () => (e.textContent = (e.dataset.pre || "") + formatNumber(o.v, dec) + (e.dataset.suf || "")),
+          })
+          undo.push(() => {
+            e.textContent = (e.dataset.pre || "") + formatNumber(to, dec) + (e.dataset.suf || "")
+          })
         })
         q(".ovs-stat-rule").forEach((el: Element) => gsap.fromTo(el, { scaleX: 0 }, { scaleX: 1, duration: 1.4, ease: "expo.inOut", scrollTrigger: { trigger: el, start: "top 90%", once: true } }))
 
@@ -1808,6 +1876,57 @@ export default function OverstoryStudioLanding({
     heroIn.current?.()
   }, [])
 
+  // Hold the shade in view while scroll advances through its quotes.
+  useIso(() => {
+    const shade = root.current?.querySelector<HTMLElement>(".ovs-shade")
+    if (!shade || still || !quotes || quotes.length < 2) return
+    const text = shade.querySelector<HTMLElement>("blockquote p")
+    const fitQuotes = () => {
+      if (!text) return
+      const probe = text.cloneNode(false) as HTMLElement
+      probe.style.cssText = "position:absolute;visibility:hidden;min-height:0;width:" + text.clientWidth + "px"
+      text.parentElement?.appendChild(probe)
+      let height = 0
+      quotes.forEach((item) => {
+        probe.textContent = item.quote
+        height = Math.max(height, probe.getBoundingClientRect().height)
+      })
+      probe.remove()
+      text.style.minHeight = Math.ceil(height) + "px"
+    }
+    fitQuotes()
+    ScrollTrigger.addEventListener("refreshInit", fitQuotes)
+    const ctx = gsap.context(() => {
+      quoteScroll.current = ScrollTrigger.create({
+        trigger: shade,
+        start: () => "top " + Math.min(0, window.innerHeight - shade.offsetHeight),
+        end: () => "+=" + window.innerHeight * quotes.length,
+        pin: true,
+        // Measure this spacer before downstream animations (especially the finale).
+        refreshPriority: 1,
+        anticipatePin: 1,
+        invalidateOnRefresh: true,
+        onUpdate: (self) => setQuote(Math.min(quotes.length - 1, Math.floor(self.progress * quotes.length))),
+      })
+    }, shade)
+    const raf = requestAnimationFrame(() => ScrollTrigger.refresh())
+    return () => {
+      cancelAnimationFrame(raf)
+      quoteScroll.current = null
+      ScrollTrigger.removeEventListener("refreshInit", fitQuotes)
+      if (text) text.style.minHeight = ""
+      ctx.revert()
+    }
+  }, [still, quotes, usePhoto])
+
+  const selectQuote = (index: number) => {
+    const trigger = quoteScroll.current
+    if (trigger && quotes?.length) {
+      trigger.scroll(trigger.start + (trigger.end - trigger.start) * ((index + 0.5) / quotes.length))
+    }
+    setQuote(index)
+  }
+
   // quotes: words rise on every change
   useIso(() => {
     if (still || !root.current) return
@@ -1817,6 +1936,32 @@ export default function OverstoryStudioLanding({
       t.kill()
     }
   }, [quote, still])
+
+  // app: the phone drifts through the section and the glass catches the light
+  useIso(() => {
+    const section = root.current?.querySelector<HTMLElement>(".ovs-app")
+    if (!section || still) return
+    const phone = section.querySelector<HTMLElement>(".ovs-app-phone")
+    const glow = section.querySelector<HTMLElement>(".ovs-app-glow")
+    const ring = section.querySelector<HTMLElement>(".ovs-app-ring")
+    const chip = section.querySelector<HTMLElement>(".ovs-app-chip")
+    const glare = section.querySelector<HTMLElement>(".ovs-app-glare")
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({
+        scrollTrigger: { trigger: section, start: "top bottom", end: "bottom top", scrub: 1 },
+      })
+      if (phone) tl.fromTo(phone, { y: 46, rotate: -3.7 }, { y: -46, rotate: -1.3, duration: 1, ease: "none" }, 0)
+      if (glow) tl.fromTo(glow, { y: 30, scale: 0.96 }, { y: -30, scale: 1.04, duration: 1, ease: "none" }, 0)
+      if (ring) tl.fromTo(ring, { y: 24, rotate: -7 }, { y: -24, rotate: 7, duration: 1, ease: "none" }, 0)
+      if (chip) tl.fromTo(chip, { y: 28, x: 8 }, { y: -28, x: -8, duration: 1, ease: "none" }, 0)
+      if (glare) tl.fromTo(glare, { xPercent: -26, opacity: 0.18 }, { xPercent: 26, opacity: 0.55, duration: 1, ease: "none" }, 0)
+    }, section)
+    const raf = requestAnimationFrame(() => ScrollTrigger.refresh())
+    return () => {
+      cancelAnimationFrame(raf)
+      ctx.revert()
+    }
+  }, [still])
 
   const copyEmail = () => {
     const done = () => {
@@ -2062,7 +2207,7 @@ export default function OverstoryStudioLanding({
                 <div className="ovs-svc-prev" aria-hidden="true">
                   {svcItems.map((s, i) => (
                     <div key={i} className="ovs-svc-art" data-on={i === svcHover ? "" : undefined}>
-                      <ServiceArt art={s.art} />
+                      {s.image ? <img src={s.image} alt="" width={240} height={160} loading="lazy" /> : <ServiceArt art={s.art} />}
                     </div>
                   ))}
                 </div>
@@ -2081,6 +2226,7 @@ export default function OverstoryStudioLanding({
                       <div id={uid + "svc" + i} className="ovs-fold" role="region" aria-label={s.title}>
                         <div>
                           <div className="ovs-svc-body">
+                            {s.image ? <img className="ovs-svc-photo" src={s.image} alt={s.imageAlt || s.title} width={1000} height={560} loading="lazy" /> : null}
                             <p>{s.text}</p>
                             <ul>
                               {s.tags.map((t) => (
@@ -2098,13 +2244,50 @@ export default function OverstoryStudioLanding({
           </section>
         ) : null}
 
+        {/* ------------------------------------------------------------ app */}
+        {ap ? (
+          <section id="app" className="ovs-sec ovs-app" data-sec="app" aria-labelledby={uid + "app"}>
+            <div className={"ovs-wrap ovs-app-grid" + (ap.visual ? "" : " ovs-app-grid-solo")}>
+              <div className="ovs-app-copy">
+                <Kicker n={ap.number} text={ap.kicker} />
+                <span id={uid + "app"}>
+                  <Split text={ap.title} className="ovs-h2" />
+                </span>
+                <p className="ovs-lede" data-rv>{ap.text}</p>
+                {ap.points.length ? (
+                  <ul className="ovs-app-points" data-rv>
+                    {ap.points.map((p) => (
+                      <li key={p}><Tick /><span>{p}</span></li>
+                    ))}
+                  </ul>
+                ) : null}
+                {ap.proof ? <p className="ovs-app-proof" data-rv><i />{ap.proof}</p> : null}
+                <div className="ovs-app-actions" data-rv>
+                  <a href={ap.cta.href} className="ovs-btn ovs-btn-lime" onClick={go(ap.cta.href)}>
+                    {ap.cta.label} <Arrow />
+                  </a>
+                  {ap.note ? <span className="ovs-app-note">{ap.note}</span> : null}
+                </div>
+              </div>
+              {ap.visual ? (
+                <div className="ovs-app-visual" data-rv>
+                  <div className="ovs-app-glow-wrap" aria-hidden="true"><div className="ovs-app-glow" /></div>
+                  <div className="ovs-app-orbit" aria-hidden="true"><div className="ovs-app-ring" /></div>
+                  <div className="ovs-app-phone-wrap">{ap.visual}</div>
+                  {ap.chip ? <div className="ovs-app-chip" aria-hidden="true"><i />{ap.chip}</div> : null}
+                </div>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
+
         {/* ----------------------------------------------------------- work */}
         {wk ? (
           <section className="ovs-work" data-work data-sec="work" aria-labelledby={uid + "wk"}>
             <div className="ovs-work-stage" data-workstage>
               <div className="ovs-wrap ovs-work-head">
                 <div>
-                  <Kicker n="03" text={wk.kicker} />
+                  <Kicker n={ap ? "04" : "03"} text={wk.kicker} />
                   <span id={uid + "wk"}>
                     <Split text={wk.title} className="ovs-h2" />
                   </span>
@@ -2123,15 +2306,14 @@ export default function OverstoryStudioLanding({
                   <article key={c.client + i} className="ovs-card" data-card style={{ "--t1": (c.tint || ["#dfe8d6", "#9fbf7a"])[0], "--t2": (c.tint || ["#dfe8d6", "#9fbf7a"])[1] } as React.CSSProperties}>
                     <a href={c.href || "#contact"} onClick={c.href ? undefined : go("#contact")} className="ovs-card-link" aria-label={c.client + ": " + c.title}>
                       <div className="ovs-card-art">
-                        <span className="ovs-card-sun" />
-                        <CaseMock mock={c.mock} name={c.client} />
+                        {c.image ? <img className="ovs-card-photo" src={c.image} alt={c.imageAlt || c.title} loading="lazy" width={1000} height={700} /> : <><span className="ovs-card-sun" /><CaseMock mock={c.mock} name={c.client} /></>}
                       </div>
                       <div className="ovs-card-meta">
                         <p className="ovs-card-client">
                           <Mark kind={c.mark} uid={uid + "c" + i} />
                           {c.client}
                           <span>
-                            {c.kind} · {c.year}
+                            {c.kind}{c.year ? " · " + c.year : ""}
                           </span>
                         </p>
                         <h3 className="ovs-card-title">{c.title}</h3>
@@ -2148,7 +2330,7 @@ export default function OverstoryStudioLanding({
                     <BrandMark />
                     <span className="ovs-card-next-t">{wk.next}</span>
                     <span className="ovs-btn ovs-btn-dark">
-                      Start a project <Arrow />
+                      {wk.nextCta} <Arrow />
                     </span>
                   </a>
                 </article>
@@ -2161,7 +2343,7 @@ export default function OverstoryStudioLanding({
         {pr ? (
           <section className="ovs-sec ovs-process" data-process data-sec="process" aria-labelledby={uid + "pr"}>
             <div className="ovs-wrap">
-              <Kicker n="04" text={pr.kicker} />
+              <Kicker n={ap ? "05" : "04"} text={pr.kicker} />
               <span id={uid + "pr"}>
                 <Split text={pr.title} className="ovs-h2 ovs-h2-wide" />
               </span>
@@ -2191,7 +2373,7 @@ export default function OverstoryStudioLanding({
 
         {/* --------------------------------------------------------- quotes */}
         {curQuote ? (
-          <section className="ovs-shade" data-sec="quotes" aria-label="What founders say" onPointerEnter={() => setQuotePaused(true)} onPointerLeave={() => setQuotePaused(false)} onFocus={() => setQuotePaused(true)} onBlur={() => setQuotePaused(false)}>
+          <section className="ovs-shade" data-sec="quotes" aria-label="What founders say">
             {usePhoto ? <div className="ovs-shade-photo" aria-hidden="true" style={{ backgroundImage: "url(" + photo + ")" }} /> : null}
             <div className="ovs-dapple" aria-hidden="true">
               <i />
@@ -2229,19 +2411,19 @@ export default function OverstoryStudioLanding({
               </figure>
               {qs.length > 1 ? (
                 <div className="ovs-quote-nav">
-                  <button type="button" className="ovs-round" aria-label="Previous quote" onClick={() => setQuote((v) => (v - 1 + qs.length) % qs.length)}>
+                  <button type="button" className="ovs-round" aria-label="Previous quote" onClick={() => selectQuote((quote - 1 + qs.length) % qs.length)}>
                     <svg className="ovs-svg" viewBox="0 0 16 16" aria-hidden="true">
                       <path d="M13 8H3m4-4L3 8l4 4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </button>
                   <div className="ovs-dots">
                     {qs.map((qq, i) => (
-                      <button key={qq.name} type="button" aria-label={"Quote " + (i + 1) + " of " + qs.length} aria-current={i === quote ? "true" : undefined} onClick={() => setQuote(i)}>
-                        {i === quote ? <i key={quote} data-paused={quotePaused ? "" : undefined} onAnimationEnd={() => setQuote((v) => (v + 1) % qs.length)} /> : null}
+                      <button key={qq.name} type="button" aria-label={"Quote " + (i + 1) + " of " + qs.length} aria-current={i === quote ? "true" : undefined} onClick={() => selectQuote(i)}>
+                        {i === quote ? <i style={{ animation: "none", transform: "scaleX(1)" }} /> : null}
                       </button>
                     ))}
                   </div>
-                  <button type="button" className="ovs-round" aria-label="Next quote" onClick={() => setQuote((v) => (v + 1) % qs.length)}>
+                  <button type="button" className="ovs-round" aria-label="Next quote" onClick={() => selectQuote((quote + 1) % qs.length)}>
                     <Arrow />
                   </button>
                 </div>
@@ -2251,12 +2433,14 @@ export default function OverstoryStudioLanding({
         ) : null}
 
         {/* -------------------------------------------------------- pricing */}
-        {pc ? (
+        {pricingContent ? (
+          <section data-sec="pricing" aria-label="Pricing">{pricingContent}</section>
+        ) : pc ? (
           <section className="ovs-sec ovs-pricing" data-sec="pricing" aria-labelledby={uid + "pc"}>
             <div className="ovs-wrap">
               <div className="ovs-head">
                 <div>
-                  <Kicker n="05" text={pc.kicker} />
+                  <Kicker n={ap ? "06" : "05"} text={pc.kicker} />
                   <span id={uid + "pc"}>
                     <Split text={pc.title} className="ovs-h2" />
                   </span>
@@ -2330,15 +2514,15 @@ export default function OverstoryStudioLanding({
           <section className="ovs-sec ovs-faq" data-sec="faq" aria-labelledby={uid + "fq"}>
             <div className="ovs-wrap ovs-faq-grid">
               <div>
-                <Kicker n="06" text={fq.kicker} />
+                <Kicker n={ap ? (pricingContent ? "06" : "07") : pricingContent ? "05" : "06"} text={fq.kicker} />
                 <span id={uid + "fq"}>
                   <Split text={fq.title} className="ovs-h2" />
                 </span>
                 <div className="ovs-faq-card" data-rv>
                   <p>{fq.text}</p>
-                  <button type="button" className="ovs-btn ovs-btn-line" onClick={copyEmail}>
+                  {faq?.contactLabel ? <a href="#contact" className="ovs-btn ovs-btn-line" onClick={go("#contact")}>{faq.contactLabel} <Arrow /></a> : <button type="button" className="ovs-btn ovs-btn-line" onClick={copyEmail}>
                     <span aria-live="polite">{copied ? "Copied to clipboard" : email}</span>
-                  </button>
+                  </button>}
                 </div>
               </div>
               <div className="ovs-acc">
@@ -2367,7 +2551,7 @@ export default function OverstoryStudioLanding({
 
         {/* --------------------------------------------------------- finale */}
         {cta ? (
-          <section className="ovs-fin" data-fin data-sec="contact" aria-labelledby={uid + "cta"}>
+          <section id="contact" className="ovs-fin" data-fin data-sec="contact" aria-labelledby={uid + "cta"}>
             <div className="ovs-fin-stage">
               <div className="ovs-window">
                 {usePhoto ? <PhotoCanopy src={photo as string} season={season} scheme={scheme} turn /> : <Canopy seed={seed + 31} scheme={scheme} palette={pal} lazy />}
@@ -2454,9 +2638,9 @@ export default function OverstoryStudioLanding({
               </div>
             </div>
           </div>
-          <div className="ovs-wordmark" data-wordmark aria-hidden="true">
-            {Array.from(brand).map((ch, i) => (
-              <span key={i}>{ch}</span>
+          <div className="ovs-wordmark" data-wordmark aria-hidden="true" style={{ fontSize: "clamp(48px, 17vw, 280px)" }}>
+            {Array.from("tani pintar").map((ch, i) => (
+              <span key={i}>{ch === " " ? "\u00a0" : ch}</span>
             ))}
           </div>
           <div className="ovs-wrap ovs-foot-bottom">
@@ -2483,10 +2667,10 @@ const OVS_CSS = `
 .ovs-root[data-season="autumn"]{--ovs-leaf2:#c9702a;--ovs-bark:#4a3020}
 .ovs-root[data-season="blossom"]{--ovs-leaf2:#d98aa9;--ovs-bark:#4a3036}
 .ovs-root *,.ovs-root *::before,.ovs-root *::after{box-sizing:border-box}
-.ovs-root :where(h1,h2,h3,p,ul,ol,dl,dd,figure,blockquote){margin:0;padding:0}
+.ovs-root :where(h1,h2,h3,p,ul,ol,dl,dd,figure,blockquote):not(:where(.pricing-ui *)){margin:0;padding:0}
 .ovs-root :where(ul,ol){list-style:none}
-.ovs-root :where(button){font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
-.ovs-root :where(a){color:inherit;text-decoration:none}
+.ovs-root :where(button):not(:where(.pricing-ui *)){font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.ovs-root :where(a):not(:where(.pricing-ui *)){color:inherit;text-decoration:none}
 .ovs-root :where(a,button,input):focus-visible{outline:2px solid var(--ovs-accent);outline-offset:3px;border-radius:6px}
 .ovs-svg{display:block;max-width:none;flex:none}
 .ovs-cv{display:block;max-width:none;width:100%;height:100%}
@@ -2498,15 +2682,9 @@ const OVS_CSS = `
 /* nav */
 .ovs-nav{position:sticky;top:0;z-index:60;height:84px;margin-bottom:-84px;display:flex;align-items:center;padding:0 clamp(12px,2.4vw,28px);transition:transform .6s cubic-bezier(.2,.8,.2,1);pointer-events:none}
 .ovs-root[data-navhide] .ovs-nav{transform:translateY(-110%)}
-.ovs-nav-in{pointer-events:auto;width:100%;max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:20px;height:60px;padding:0 10px 0 18px;border-radius:999px;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.3);backdrop-filter:blur(16px) saturate(1.3);-webkit-backdrop-filter:blur(16px) saturate(1.3);transition:background .5s,border-color .5s,box-shadow .5s;color:var(--ovs-hero-ink)}
+.ovs-nav-in{pointer-events:auto;width:100%;max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:20px;height:60px;padding:0 10px 0 18px;border-radius:999px;border:1px solid rgba(255,255,255,.5);background:rgba(244,246,240,.62);backdrop-filter:blur(20px) saturate(1.3);-webkit-backdrop-filter:blur(20px) saturate(1.3);box-shadow:0 8px 32px -16px rgba(10,20,8,.3),inset 0 1px 0 rgba(255,255,255,.35);transition:background .5s,border-color .5s,box-shadow .5s;color:var(--ovs-hero-ink)}
 .ovs-root[data-scheme="dark"] .ovs-nav-in{background:rgba(8,14,30,.34);border-color:rgba(255,255,255,.12)}
 .ovs-root[data-solid] .ovs-nav-in{background:color-mix(in oklab,var(--ovs-paper) 72%,transparent);border-color:var(--ovs-line);box-shadow:0 10px 40px -18px rgba(10,20,8,.35);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);color:var(--ovs-ink)}
-.ovs-root[data-photo]:not([data-solid]):not([data-menu]) .ovs-nav-in{background:transparent;border-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;color:#f6f8f0;text-shadow:0 1px 14px rgba(0,0,0,.35)}
-.ovs-root[data-photo]:not([data-solid]):not([data-menu]) .ovs-brandmark{color:#f6f8f0}
-.ovs-root[data-photo]:not([data-solid]):not([data-menu]) .ovs-nav-cta{background:#f6f8f0;color:#10150d;text-shadow:none}
-.ovs-root[data-photo]:not([data-solid]):not([data-menu]) .ovs-links{background:rgba(14,22,10,.26);backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
-.ovs-root[data-photo]:not([data-solid]):not([data-menu]) .ovs-links a{opacity:.92}
-.ovs-root[data-photo]:not([data-solid]):not([data-menu]) .ovs-links a[data-on]{background:rgba(255,255,255,.16)}
 .ovs-brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:18px;letter-spacing:-.02em}
 .ovs-brandmark{width:26px;height:26px;color:var(--ovs-accent)}
 .ovs-root[data-scheme="dark"] .ovs-brandmark{color:var(--ovs-soft)}
@@ -2647,6 +2825,7 @@ const OVS_CSS = `
 .ovs-svc-art{position:absolute;inset:0;clip-path:inset(100% 0 0 0);transition:clip-path .6s cubic-bezier(.7,0,.2,1)}
 .ovs-svc-art[data-on]{clip-path:inset(0 0 0 0)}
 .ovs-svc-art .ovs-svg{width:240px;height:160px}
+.ovs-svc-art img{display:block;width:100%;height:100%;object-fit:cover}
 .ovs-svc-row{--ovs-rule:1;position:relative;border-top:1px solid transparent}
 .ovs-svc-row::before{content:"";position:absolute;left:0;right:0;top:-1px;height:1px;background:var(--ovs-line);transform:scaleX(var(--ovs-rule));transform-origin:0 50%}
 .ovs-svc-row:last-child{border-bottom:1px solid var(--ovs-line)}
@@ -2665,9 +2844,46 @@ const OVS_CSS = `
 .ovs-fold>div{overflow:hidden;min-height:0}
 .ovs-root [data-open]>.ovs-fold{grid-template-rows:1fr}
 .ovs-svc-body{display:grid;grid-template-columns:70px 1fr;gap:20px;padding:0 10px 34px}
+.ovs-svc-photo{grid-column:2;display:block;width:100%;max-width:720px;height:auto;aspect-ratio:16/9;object-fit:cover;border-radius:18px}
 .ovs-svc-body p{grid-column:2;font-size:clamp(16px,1.3vw,19px);color:var(--ovs-ink2);max-width:34em}
 .ovs-svc-body ul{grid-column:2;display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 .ovs-svc-body li{font-size:13.5px;padding:6px 13px;border-radius:999px;background:var(--ovs-card);border:1px solid var(--ovs-line)}
+
+/* app */
+.ovs-app{position:relative;background:var(--ovs-forest);color:#edf1e6;padding:clamp(70px,8vw,110px) 0;overflow:hidden}
+.ovs-app::before{content:"";position:absolute;inset:0;background:radial-gradient(58% 70% at 78% 46%,rgba(196,220,82,.16),transparent 66%),radial-gradient(48% 60% at 10% 0%,rgba(196,220,82,.07),transparent 70%);pointer-events:none}
+.ovs-app::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(237,241,230,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(237,241,230,.04) 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(56% 68% at 72% 50%,#000,transparent 78%);-webkit-mask-image:radial-gradient(56% 68% at 72% 50%,#000,transparent 78%);pointer-events:none}
+.ovs-app-grid{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.82fr);gap:clamp(40px,6vw,90px);align-items:center}
+.ovs-app-grid-solo{grid-template-columns:minmax(0,1fr);max-width:760px}
+.ovs-app-copy{position:relative;z-index:1}
+.ovs-app .ovs-kicker{color:rgba(237,241,230,.62)}
+.ovs-app .ovs-kicker-n{color:var(--ovs-soft)}
+.ovs-app .ovs-h2{color:#edf1e6;max-width:12em}
+.ovs-app .ovs-lede{color:rgba(237,241,230,.68);margin-top:24px;max-width:33em}
+.ovs-app-points{display:flex;flex-direction:column;gap:14px;margin-top:30px}
+.ovs-app-points li{display:flex;gap:12px;align-items:flex-start;font-size:clamp(14.5px,1.15vw,16.5px);line-height:1.4;color:rgba(237,241,230,.9)}
+.ovs-app-points .ovs-svg{width:17px;height:17px;flex:none;margin-top:2px;color:var(--ovs-soft)}
+.ovs-app-actions{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:34px}
+.ovs-app .ovs-btn-lime{background:var(--ovs-soft);color:#10150d;border-color:transparent}
+.ovs-app .ovs-btn-lime:hover{box-shadow:0 14px 36px -12px rgba(196,220,82,.55)}
+.ovs-app-note{font-size:12.5px;letter-spacing:.01em;color:rgba(237,241,230,.5)}
+.ovs-app-proof{display:flex;align-items:center;gap:9px;margin-top:26px;font-size:12.5px;letter-spacing:.01em;color:rgba(237,241,230,.48)}
+.ovs-app-proof i{width:6px;height:6px;flex:none;border-radius:50%;background:var(--ovs-soft);box-shadow:0 0 0 0 rgba(196,220,82,.5);animation:ovs-app-pulse 2.2s infinite}
+.ovs-app-visual{position:relative;display:flex;align-items:center;justify-content:center;min-height:560px;isolation:isolate}
+.ovs-app-glow-wrap{position:absolute;inset:0;display:grid;place-items:center;z-index:0;pointer-events:none}
+.ovs-app-glow{width:min(100%,480px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(196,220,82,.28),rgba(196,220,82,0) 66%);filter:blur(20px);will-change:transform}
+.ovs-app-orbit{position:absolute;inset:0;display:grid;place-items:center;z-index:0;pointer-events:none}
+.ovs-app-ring{position:relative;width:min(100%,540px);aspect-ratio:1;border-radius:50%;border:1px solid rgba(196,220,82,.16);box-shadow:0 0 0 44px rgba(196,220,82,.025),inset 0 0 70px rgba(196,220,82,.04);will-change:transform}
+.ovs-app-ring::before{content:"";position:absolute;inset:11%;border-radius:50%;border:1px dashed rgba(196,220,82,.13)}
+.ovs-app-ring::after{content:"";position:absolute;left:50%;top:-4px;width:7px;height:7px;border-radius:50%;background:var(--ovs-soft);box-shadow:0 0 18px rgba(196,220,82,.8);transform:translateX(-50%)}
+.ovs-app-phone-wrap{position:relative;z-index:2;width:min(100%,340px);animation:ovs-app-float 7s ease-in-out infinite}
+.ovs-app-phone-wrap::after{content:"";position:absolute;left:50%;bottom:-30px;width:76%;height:24px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse,rgba(0,0,0,.55),transparent 70%);filter:blur(9px);z-index:-1;pointer-events:none}
+.ovs-app-phone{width:100%;filter:drop-shadow(0 44px 70px rgba(0,0,0,.5));transform:rotate(-2.5deg);--phone-notch:#0e1a10;--phone-notch-dot:#1c2a1e;will-change:transform}
+.ovs-app-glare{position:absolute;inset:-30% -35%;z-index:5;pointer-events:none;background:linear-gradient(112deg,transparent 36%,rgba(255,255,255,.04) 44%,rgba(255,255,255,.2) 49%,rgba(255,255,255,.05) 54%,transparent 63%);mix-blend-mode:screen;opacity:.4;transform:translateX(-18%)}
+.ovs-app-chip{position:absolute;right:max(0px,calc(50% - 210px));top:12%;display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;background:rgba(244,246,240,.94);color:#10150d;font-size:11.5px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;box-shadow:0 14px 30px -12px rgba(0,0,0,.4);z-index:3}
+.ovs-app-chip i{width:7px;height:7px;border-radius:50%;background:#5f8a3a;box-shadow:0 0 0 0 rgba(95,138,58,.5);animation:ovs-app-pulse 2.2s infinite}
+@keyframes ovs-app-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes ovs-app-pulse{0%{box-shadow:0 0 0 0 rgba(95,138,58,.5)}70%{box-shadow:0 0 0 8px rgba(95,138,58,0)}100%{box-shadow:0 0 0 0 rgba(95,138,58,0)}}
 
 /* work */
 .ovs-work{position:relative;background:var(--ovs-paper)}
@@ -2686,6 +2902,7 @@ const OVS_CSS = `
 .ovs-work[data-h] .ovs-card{width:min(64vw,760px);height:min(calc(var(--ovs-h) - 370px),540px);min-height:360px}
 .ovs-card-link{display:flex;flex-direction:column;flex:1;min-height:0}
 .ovs-card-art{position:relative;flex:1;min-height:260px;overflow:hidden;background:radial-gradient(120% 90% at 80% 10%,var(--t1),var(--t2));display:flex;align-items:center;justify-content:center;padding:28px}
+.ovs-card-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .ovs-root[data-scheme="dark"] .ovs-card-art{background:radial-gradient(120% 90% at 80% 10%,color-mix(in oklab,var(--t2) 60%,#000),color-mix(in oklab,var(--t2) 22%,#000))}
 .ovs-card-sun{position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(rgba(255,255,255,.75),transparent 70%);transition:transform 1.2s cubic-bezier(.2,.8,.2,1)}
 .ovs-card:hover .ovs-card-sun{transform:translate(-40px,30px) scale(1.3)}
@@ -2758,8 +2975,8 @@ const OVS_CSS = `
 .ovs-step p:last-child{font-size:clamp(16px,1.3vw,19px);color:var(--ovs-ink2);max-width:28em}
 
 /* quotes */
-.ovs-shade{position:relative;overflow:hidden;background:var(--ovs-forest);color:#edf1e6;padding:clamp(100px,13vw,180px) 0}
-.ovs-shade-photo{position:absolute;inset:-6%;background-size:cover;background-position:center;transform:rotate(180deg);filter:blur(2px) brightness(.34) saturate(.85);pointer-events:none}
+.ovs-shade{position:relative;overflow:hidden;min-height:100svh;display:flex;align-items:center;background:var(--ovs-forest);color:#edf1e6;padding:clamp(80px,9vw,120px) 0}
+.ovs-shade-photo{position:absolute;inset:-14%;background-size:cover;background-position:center;transform:rotate(180deg);filter:blur(2px) brightness(.34) saturate(.85);pointer-events:none}
 .ovs-root[data-season="autumn"] .ovs-shade-photo{filter:blur(2px) brightness(.34) saturate(1.1) sepia(.35) hue-rotate(-18deg)}
 .ovs-root[data-season="blossom"] .ovs-shade-photo{filter:blur(2px) brightness(.36) saturate(.6) hue-rotate(250deg)}
 .ovs-shade::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,var(--ovs-forest),color-mix(in oklab,var(--ovs-forest) 40%,transparent) 30%,color-mix(in oklab,var(--ovs-forest) 55%,transparent) 70%,var(--ovs-forest));pointer-events:none}
@@ -2859,7 +3076,7 @@ const OVS_CSS = `
 .ovs-clock{display:flex;align-items:center;gap:8px;font-size:15px;font-variant-numeric:tabular-nums}
 .ovs-clock i{width:7px;height:7px;border-radius:50%;background:#4cbb3f;animation:ovs-pulse 2.2s infinite}
 .ovs-wordmark{display:flex;justify-content:center;font-size:clamp(80px,20.5vw,330px);line-height:.8;letter-spacing:-.07em;font-weight:600;margin-top:clamp(60px,8vw,110px);overflow:hidden;padding:0 12px .06em;user-select:none}
-.ovs-wordmark span{display:inline-block;background:linear-gradient(180deg,var(--ovs-soft),color-mix(in oklab,var(--ovs-soft) 40%,var(--ovs-forest)) 92%);-webkit-background-clip:text;background-clip:text;color:transparent;transition:transform .6s cubic-bezier(.2,.8,.2,1)}
+.ovs-wordmark span{display:inline-block;background:linear-gradient(180deg,var(--ovs-soft),color-mix(in oklab,var(--ovs-soft) 12%,var(--ovs-forest)) 92%,var(--ovs-forest) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;transition:transform .6s cubic-bezier(.2,.8,.2,1)}
 .ovs-wordmark span:hover{transform:translateY(-6%)}
 .ovs-foot-bottom{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;padding-top:22px;padding-bottom:26px;border-top:1px solid rgba(237,241,230,.12);font-size:13.5px;color:rgba(237,241,230,.6)}
 .ovs-top{display:inline-flex;align-items:center;gap:8px;color:#edf1e6;font-size:13.5px}
@@ -2868,9 +3085,10 @@ const OVS_CSS = `
 
 /* responsive */
 @media (max-width:1020px){.ovs-links{display:none}.ovs-burger{display:flex}.ovs-nav-in{justify-content:space-between}.ovs-plans{grid-template-columns:1fr;max-width:520px}.ovs-stats{grid-template-columns:repeat(2,1fr);row-gap:40px}.ovs-foot-top{grid-template-columns:1fr}.ovs-svc-time{display:none}.ovs-svc-h button{grid-template-columns:44px 1fr 40px}.ovs-svc-body{grid-template-columns:44px 1fr}}
-@media (max-width:820px){.ovs-proc-grid{grid-template-columns:1fr}.ovs-tree-col{display:none}.ovs-step{opacity:1;min-height:0}.ovs-faq-grid{grid-template-columns:1fr}.ovs-foot-cols{grid-template-columns:repeat(2,1fr);row-gap:36px}.ovs-card-meta{grid-template-columns:1fr}.ovs-card-metric{text-align:left;align-items:flex-start}.ovs-svc-prev{display:none}}
-@media (max-width:560px){.ovs-root[data-photo] .ovs-copy::before{left:-4%;right:-4%;top:-14%;bottom:-14%}.ovs-nav-cta{display:none}.ovs-logo-row{column-gap:20px}.ovs-h1{font-size:clamp(36px,10.4vw,56px)}.ovs-quote figcaption{flex-wrap:wrap}.ovs-mock-phone{width:190px}.ovs-mk-kpis b{font-size:14px}.ovs-acc-item p{padding-right:0}}
-@media (prefers-reduced-motion:reduce){.ovs-sway,.ovs-sway-p,.ovs-status i,.ovs-clock i,.ovs-dapple i,.ovs-plan-ring,.ovs-cue-line::after,.ovs-sheet a{animation:none}.ovs-dots i{animation:none;transform:scaleX(1)}.ovs-fold,.ovs-svc-art,.ovs-svc-row::after,.ovs-svc-t,.ovs-seg-pill,.ovs-nav,.ovs-mock,.ovs-card-sun{transition:none}}
+@media (max-width:900px){.ovs-app-grid{grid-template-columns:1fr;gap:56px}.ovs-app-visual{order:2;min-height:0}.ovs-app-copy{order:1}.ovs-app-phone-wrap{width:min(100%,320px)}.ovs-app-chip{right:auto;left:calc(50% + 70px);top:7%}}
+@media (max-width:820px){.ovs-proc-grid{grid-template-columns:1fr}.ovs-tree-col{display:none}.ovs-step{opacity:1;min-height:0}.ovs-faq-grid{grid-template-columns:1fr}.ovs-foot-cols{grid-template-columns:repeat(2,1fr);row-gap:36px}.ovs-card-meta{grid-template-columns:1fr}.ovs-card-metric{text-align:left;align-items:flex-start}.ovs-svc-prev{display:none}.ovs-app-grid{grid-template-columns:1fr;gap:56px}.ovs-app-visual{order:2;min-height:0}.ovs-app-copy{order:1}.ovs-app-phone-wrap{width:min(100%,300px)}.ovs-app-chip{right:auto;left:calc(50% + 70px);top:7%}}
+@media (max-width:560px){.ovs-root[data-photo] .ovs-copy::before{left:-4%;right:-4%;top:-14%;bottom:-14%}.ovs-nav-cta{display:none}.ovs-logo-row{column-gap:20px}.ovs-h1{font-size:clamp(36px,10.4vw,56px)}.ovs-quote figcaption{flex-wrap:wrap}.ovs-mock-phone{width:190px}.ovs-mk-kpis b{font-size:14px}.ovs-acc-item p{padding-right:0}.ovs-app{padding:64px 0 76px}.ovs-app-phone-wrap{width:min(100%,260px)}.ovs-app-chip{display:none}.ovs-app-actions{align-items:flex-start;flex-direction:column;gap:12px}.ovs-app .ovs-btn{width:100%;justify-content:center}}
+@media (prefers-reduced-motion:reduce){.ovs-sway,.ovs-sway-p,.ovs-status i,.ovs-clock i,.ovs-dapple i,.ovs-plan-ring,.ovs-cue-line::after,.ovs-sheet a,.ovs-app-phone-wrap,.ovs-app-chip i,.ovs-app-proof i{animation:none}.ovs-dots i{animation:none;transform:scaleX(1)}.ovs-fold,.ovs-svc-art,.ovs-svc-row::after,.ovs-svc-t,.ovs-seg-pill,.ovs-nav,.ovs-mock,.ovs-card-sun{transition:none}}
 `
 
 // The canopy photo: looking up through plane trees into a gap of sky. Adobe Stock

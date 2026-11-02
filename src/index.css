@@ -1,5 +1,31 @@
-/* Only a reset. The component carries its own scoped CSS (injected in a <style>)
-   and its own colours, so nothing here should fight it. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@theme inline {
+  --color-background: var(--ovs-paper, #f4f6f0);
+  --color-foreground: var(--ovs-ink, #10150d);
+  --color-primary: var(--ovs-soft, #aec643);
+  --color-primary-foreground: #10150d;
+  --color-muted-foreground: var(--ovs-ink2, #4b5546);
+  --color-border: var(--ovs-line, #d8ddcf);
+  --color-input: #a7b19b;
+  --color-ring: #6f9a2a;
+  --color-accent: #e2eacb;
+  --color-accent-foreground: #10150d;
+  --color-secondary: #e2eacb;
+  --color-secondary-foreground: #10150d;
+  --color-destructive: #b91c1c;
+  --color-destructive-foreground: #fff;
+}
+
+/* Keep the existing landing-page reset; omit Tailwind Preflight. */
+@layer base {
+  .pricing-ui :where(h2, p, ul) { margin: 0; }
+  .pricing-ui :where(ul) { padding: 0; list-style: none; }
+  .pricing-ui a { text-decoration: none; }
+  .pricing-ui button { font: inherit; padding: 0; }
+}
 *,
 *::before,
 *::after {
