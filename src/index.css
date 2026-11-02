@@ -1,0 +1,17 @@
+/* Only a reset. The component carries its own scoped CSS (injected in a <style>)
+   and its own colours, so nothing here should fight it. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  min-height: 100svh;
+}
